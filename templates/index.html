@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Citra Digital- Filter Gambar</title>
+    <!-- Bootstrap CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .preview-container {
+            max-width: 300px;
+            margin-top: 15px;
+            display: none;
+        }
+        .preview-image {
+            width: 100%;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .result-image {
+            max-width: 100%;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .processing-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .processing-text {
+            color: white;
+            margin-top: 15px;
+            font-size: 1.2rem;
+        }
+        .comparison-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .image-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .image-header {
+            padding: 10px 15px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .image-body {
+            padding: 15px;
+            text-align: center;
+        }
+        .filter-type {
+            background-color: #e9ecef;
+            border-radius: 5px;
+            padding: 8px 12px;
+            margin-bottom: 15px;
+        }
+        .slider-container {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .slider-value {
+            font-weight: bold;
+            min-width: 30px;
+            text-align: right;
+        }
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.05);
+        }
+        .upload-area i {
+            font-size: 3rem;
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+        .upload-area.active {
+            border-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.1);
+        }
+        .editor-container {
+            display: none;
+        }
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+            border-width: 0.15em;
+        }
+        .mini-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            margin-right: 10px;
+            object-fit: cover;
+            border: 1px solid #ddd;
+        }
+
+        /* Enhanced Slider Styling */
+        .form-range {
+            height: 1.5rem; /* Increase the overall height */
+            padding: 0;
+        }
+
+        /* Webkit browsers (Chrome, Safari) */
+        .form-range::-webkit-slider-runnable-track {
+            height: 0.5rem; /* Thicker track */
+            background: #0d6efd; /* Blue color for better visibility */
+            border-radius: 0.25rem;
+            border: 1px solid rgba(0, 0, 0, 0.2); /* Add border */
+        }
+
+        /* Firefox */
+        .form-range::-moz-range-track {
+            height: 0.5rem;
+            background: #0d6efd;
+            border-radius: 0.25rem;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        /* IE/Edge */
+        .form-range::-ms-track {
+            height: 0.5rem;
+            background: #0d6efd;
+            border-radius: 0.25rem;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        /* Thumb styling */
+        .form-range::-webkit-slider-thumb {
+            margin-top: -0.5rem; /* Adjust for the new track height */
+            box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(13, 110, 253, 0.5); /* Add a subtle glow effect */
+        }
+
+        .form-range::-moz-range-thumb {
+            box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(13, 110, 253, 0.5);
+        }
+
+        .form-range::-ms-thumb {
+            box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(13, 110, 253, 0.5);
+        }
+
+        /* For unfilled part of the track */
+        .form-range::-webkit-slider-runnable-track {
+            background: linear-gradient(90deg, #0d6efd 0%, #0d6efd var(--range-percent, 50%), #cfe2ff var(--range-percent, 50%), #cfe2ff 100%);
+        }
+
+        /* Hover effect */
+        .form-range:hover::-webkit-slider-runnable-track {
+            background-color: #0b5ed7;
+        }
+
+        .form-range:hover::-moz-range-track {
+            background-color: #0b5ed7;
+        }
+
+        .form-range:hover::-ms-track {
+            background-color: #0b5ed7;
+        }
+
+        @media (min-width: 768px) {
+            .comparison-container {
+                flex-direction: row;
+            }
+            .image-card {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Processing Overlay -->
+    <div class="processing-overlay" id="processingOverlay">
+        <div class="spinner-border text-light" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <div class="processing-text">Processing image...</div>
+    </div>
+
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Citra Digital- Filter Gambar</h3>
+                    </div>
+                    <div class="card-body">
+                        <!-- Upload Area -->
+                        <div class="upload-area" id="uploadArea">
+                            <i class="bi bi-cloud-arrow-up"></i>
+                            <h4>Upload Image</h4>
+                            <p class="text-muted">Click or drag & drop your image here</p>
+                            <input type="file" id="imageUpload" class="d-none" accept="image/*">
+                        </div>
+
+                        <!-- Editor Container (Initially Hidden) -->
+                        <div class="editor-container" id="editorContainer">
+                            <!-- Filter Selection and Preview Section -->
+                            <div class="row mb-4 align-items-center">
+                                <div class="col-auto d-none d-md-block">
+                                    <img src="" id="miniPreview" class="mini-preview" alt="Preview">
+                                </div>
+                                <div class="col">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1">
+                                            <select class="form-select" id="filterSelect" onchange="applyFilter()">
+                                                <option value="identity">Identity (No change)</option>
+                                                <option value="edge">Edge Detection</option>
+                                                <option value="sharpen">Sharpen</option>
+                                                <option value="blur">Blur</option>
+                                                <option value="grayscale">Grayscale</option>
+                                                <option value="sepia">Sepia</option>
+                                                <option value="invert">Invert</option>
+                                                <option value="emboss">Emboss</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-outline-secondary ms-2" id="resetButton" onclick="resetAll()">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Reset
+                                        </button>
+                                        <a href="#" id="downloadButton" class="btn btn-success ms-2" download="edited_image.png">
+                                            <i class="bi bi-download"></i> Download
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Image Adjustment Sliders -->
+                            <div class="slider-container">
+                                <h5 class="mb-3">Image Adjustments</h5>
+
+                                <!-- Brightness Slider -->
+                                <div class="mb-3">
+                                    <div class="slider-label">
+                                        <label for="brightness" class="form-label">Brightness:</label>
+                                        <span class="slider-value" id="brightnessValue">0</span>
+                                    </div>
+                                    <input type="range" class="form-range" id="brightness"
+                                           min="-100" max="100" value="0" oninput="updateSliderValue('brightness')">
+                                </div>
+
+                                <!-- Contrast Slider -->
+                                <div class="mb-3">
+                                    <div class="slider-label">
+                                        <label for="contrast" class="form-label">Contrast:</label>
+                                        <span class="slider-value" id="contrastValue">0</span>
+                                    </div>
+                                    <input type="range" class="form-range" id="contrast"
+                                           min="-100" max="100" value="0" oninput="updateSliderValue('contrast')">
+                                </div>
+
+                                <!-- Saturation Slider -->
+                                <div class="mb-3">
+                                    <div class="slider-label">
+                                        <label for="saturation" class="form-label">Saturation:</label>
+                                        <span class="slider-value" id="saturationValue">0</span>
+                                    </div>
+                                    <input type="range" class="form-range" id="saturation"
+                                           min="-100" max="100" value="0" oninput="updateSliderValue('saturation')">
+                                </div>
+                            </div>
+
+                            <!-- Result Display -->
+                            <div class="comparison-container">
+                                <!-- Original Image -->
+                                <div class="image-card">
+                                    <div class="image-header">
+                                        <span><strong>Original Image</strong></span>
+                                    </div>
+                                    <div class="image-body">
+                                        <img src="" id="originalImage" class="result-image" alt="Original Image">
+                                    </div>
+                                </div>
+
+                                <!-- Filtered Image -->
+                                <div class="image-card">
+                                    <div class="image-header">
+                                        <span><strong>Processed Image</strong></span>
+                                        <div id="processingIndicator" class="d-none">
+                                            <span class="spinner-border spinner-border-sm text-primary me-1" role="status"></span>
+                                            <small>Processing...</small>
+                                        </div>
+                                    </div>
+                                    <div class="image-body">
+                                        <div class="filter-type mb-2" id="filterInfo">
+                                            Filter: <strong>Identity</strong>
+                                        </div>
+                                        <img src="" id="processedImage" class="result-image" alt="Processed Image">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Upload Another Button -->
+                            <div class="text-center mt-4">
+                                <button class="btn btn-outline-primary" onclick="showUploadArea()">
+                                    <i class="bi bi-arrow-repeat"></i> Upload Different Image
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Scripts -->
+    <script>
+        // Global variables
+        let originalImageData = null;
+        let lastRequestTime = 0;
+        const debounceTime = 300; // ms to wait between requests
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', function() {
+            setupUploadArea();
+            setupSliders();
+        });
+
+        // Setup the upload area
+        function setupUploadArea() {
+            const uploadArea = document.getElementById('uploadArea');
+            const imageUpload = document.getElementById('imageUpload');
+
+            // Click on upload area triggers file input
+            uploadArea.addEventListener('click', function() {
+                imageUpload.click();
+            });
+
+            // Drag and drop functionality
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('active');
+            });
+
+            uploadArea.addEventListener('dragleave', function() {
+                this.classList.remove('active');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('active');
+
+                if (e.dataTransfer.files.length) {
+                    imageUpload.files = e.dataTransfer.files;
+                    handleImageUpload(e.dataTransfer.files[0]);
+                }
+            });
+
+            // File input change
+            imageUpload.addEventListener('change', function() {
+                if (this.files.length) {
+                    handleImageUpload(this.files[0]);
+                }
+            });
+        }
+
+        // Setup slider events
+        function setupSliders() {
+            const sliders = ['brightness', 'contrast', 'saturation'];
+
+            sliders.forEach(slider => {
+                document.getElementById(slider).addEventListener('input', function() {
+                    updateSliderValue(slider);
+
+                    // Debounce the API call
+                    const now = Date.now();
+                    if (now - lastRequestTime > debounceTime) {
+                        lastRequestTime = now;
+                        applyFilter();
+                    }
+                });
+
+                document.getElementById(slider).addEventListener('change', function() {
+                    // Always make an API call on slider release
+                    applyFilter();
+                });
+            });
+        }
+
+        // Handle the uploaded image
+        function handleImageUpload(file) {
+            if (!file.type.match('image.*')) {
+                alert('Please select an image file.');
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                originalImageData = e.target.result;
+
+                // Display original image
+                document.getElementById('originalImage').src = originalImageData;
+                document.getElementById('miniPreview').src = originalImageData;
+
+                // Initial processing
+                applyFilter();
+
+                // Hide upload area, show editor
+                document.getElementById('uploadArea').style.display = 'none';
+                document.getElementById('editorContainer').style.display = 'block';
+
+                // Update download link
+                updateDownloadLink(originalImageData);
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        // Update the slider value display
+        function updateSliderValue(sliderId) {
+            const slider = document.getElementById(sliderId);
+            const valueDisplay = document.getElementById(sliderId + 'Value');
+            valueDisplay.textContent = slider.value;
+        }
+
+        // Reset all settings
+        function resetAll() {
+            // Reset sliders
+            const sliders = ['brightness', 'contrast', 'saturation'];
+            sliders.forEach(slider => {
+                document.getElementById(slider).value = 0;
+                document.getElementById(slider + 'Value').textContent = '0';
+            });
+
+            // Reset filter
+            document.getElementById('filterSelect').value = 'identity';
+
+            // Apply changes
+            applyFilter();
+        }
+
+        // Show upload area again
+        function showUploadArea() {
+            document.getElementById('editorContainer').style.display = 'none';
+            document.getElementById('uploadArea').style.display = 'block';
+
+            // Reset file input
+            document.getElementById('imageUpload').value = '';
+        }
+
+        // Apply filter and adjustments
+        function applyFilter() {
+            if (!originalImageData) return;
+
+            // Show processing indicator
+            document.getElementById('processingIndicator').classList.remove('d-none');
+
+            // Get current settings
+            const filter = document.getElementById('filterSelect').value;
+            const brightness = document.getElementById('brightness').value;
+            const contrast = document.getElementById('contrast').value;
+            const saturation = document.getElementById('saturation').value;
+
+            // Update filter info
+            document.getElementById('filterInfo').innerHTML = `
+                Filter: <strong>${filter.charAt(0).toUpperCase() + filter.slice(1)}</strong>
+                ${(brightness != 0 || contrast != 0 || saturation != 0) ?
+                  `<div class="mt-1 small">
+                    ${brightness != 0 ? `Brightness: <strong>${brightness}</strong>` : ''}
+                    ${contrast != 0 ? `${brightness != 0 ? ' • ' : ''}Contrast: <strong>${contrast}</strong>` : ''}
+                    ${saturation != 0 ? `${(brightness != 0 || contrast != 0) ? ' • ' : ''}Saturation: <strong>${saturation}</strong>` : ''}
+                  </div>` : ''}
+            `;
+
+            // Send data to server for processing
+            fetch('/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    image: originalImageData,
+                    filter: filter,
+                    brightness: brightness,
+                    contrast: contrast,
+                    saturation: saturation
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Update processed image
+                document.getElementById('processedImage').src = data.processed_image;
+
+                // Update download link
+                updateDownloadLink(data.processed_image);
+
+                // Hide processing indicator
+                document.getElementById('processingIndicator').classList.add('d-none');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('processingIndicator').classList.add('d-none');
+                alert('An error occurred while processing the image.');
+            });
+        }
+
+        // Update download link
+        function updateDownloadLink(dataUrl) {
+            const downloadButton = document.getElementById('downloadButton');
+            downloadButton.href = dataUrl;
+        }
+    </script>
+</body>
+</html>
